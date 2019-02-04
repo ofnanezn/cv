@@ -26,8 +26,8 @@ Complete la tabla:
 
 | Integrante | github nick |
 |------------|-------------|
-|            |             |
-
+|Oscar Fabian Nanez Nunez  | ofnanezn   |
+|Juan Camilo Rubio Avila	 | jcrubioa		|
 ## Entrega
 
 * Subir el código al repositorio de la materia antes del 14/10/18 a las 24h.
