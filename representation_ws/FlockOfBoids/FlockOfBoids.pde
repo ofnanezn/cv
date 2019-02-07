@@ -25,6 +25,7 @@
 import frames.primitives.*;
 import frames.core.*;
 import frames.processing.*;
+import java.util.Random;
 
 Scene scene;
 //flock bounding box
@@ -33,13 +34,35 @@ static int flockHeight = 720;
 static int flockDepth = 600;
 static boolean avoidWalls = true;
 
+int r0, r1, r2, r3, r4, r5, r6;
 int initBoidNum = 900; // amount of boids to start the program with
 ArrayList<Boid> flock;
 Frame avatar;
 boolean animate = true;
+String curve = "7B"; 
 
 void setup() {
   size(1000, 800, P3D);
+  Random r = new Random();
+  
+  if(curve == "3B"){
+    r0 = r.nextInt(initBoidNum);
+    r1 = r.nextInt(initBoidNum);
+    r2 = r.nextInt(initBoidNum);
+    r3 = r.nextInt(initBoidNum);
+  } else if(curve == "3H"){
+    r0 = r.nextInt(initBoidNum);
+    r1 = r.nextInt(initBoidNum);
+  } else if(curve == "7B"){
+    r0 = r.nextInt(initBoidNum);
+    r1 = r.nextInt(initBoidNum);
+    r2 = r.nextInt(initBoidNum);
+    r3 = r.nextInt(initBoidNum);
+    r4 = r.nextInt(initBoidNum);
+    r5 = r.nextInt(initBoidNum);
+    r6 = r.nextInt(initBoidNum);
+    print(r0 + " " + r1 + " " + r2 + " " + r3 + " " + r4 + " " + r5 + " " + r6);
+  }
   scene = new Scene(this);
   scene.setBoundingBox(new Vector(0, 0, 0), new Vector(flockWidth, flockHeight, flockDepth));
   scene.setAnchor(scene.center());
@@ -55,10 +78,88 @@ void draw() {
   background(10, 50, 25);
   ambientLight(128, 128, 128);
   directionalLight(255, 255, 255, 0, 1, -100);
+  //print(flock.get(0).position);
   walls();
   scene.traverse();
+  stroke(255,255,0);
+  
+  if(curve == "3B"){
+    Vector v0 = flock.get(r0).position;
+    Vector v1 = flock.get(r1).position;
+    Vector v2 = flock.get(r2).position;
+    Vector v3 = flock.get(r3).position;
+    
+    Point P0 = new Point(v0.x(), v0.y(), v0.z());
+    Point P1 = new Point(v1.x(), v1.y(), v1.z());
+    Point P2 = new Point(v2.x(), v2.y(), v2.z());
+    Point P3 = new Point(v3.x(), v3.y(), v3.z());
+    
+    cubicBezierCurve(P0, P1, P2, P3);
+  } else if(curve == "3H"){
+    Vector v0 = flock.get(r0).position;
+    Vector v1 = flock.get(r1).position;
+    
+    Point P0 = new Point(v0.x(), v0.y(), v0.z());
+    Point P1 = new Point(v1.x(), v1.y(), v1.z());
+    Point m1 = new Point(P0.x+10, P0.y+10, P0.z+10);
+    Point m0 = new Point(P1.x-20, P1.y-20, P1.z-20);
+    
+    cubicHermiteCurve(P0, P1, m0, m1);
+  } else if(curve == "7B"){
+    Vector v0 = flock.get(r0).position;
+    Vector v1 = flock.get(r1).position;
+    Vector v2 = flock.get(r2).position;
+    Vector v3 = flock.get(r3).position;
+    Vector v4 = flock.get(r4).position;
+    Vector v5 = flock.get(r5).position;
+    Vector v6 = flock.get(r6).position;
+    
+    Point P0 = new Point(v0.x(), v0.y(), v0.z());
+    Point P1 = new Point(v1.x(), v1.y(), v1.z());
+    Point P2 = new Point(v2.x(), v2.y(), v2.z());
+    Point P3 = new Point(v3.x(), v3.y(), v3.z());
+    Point P4 = new Point(v4.x(), v4.y(), v4.z());
+    Point P5 = new Point(v5.x(), v5.y(), v5.z());
+    Point P6 = new Point(v6.x(), v6.y(), v6.z());
+    Point[] P = new Point[]{P0,P1,P2,P3,P4,P5,P6};
+    
+    BezierCurve(P);
+  }
+  
+  
   // uncomment to asynchronously update boid avatar. See mouseClicked()
   // updateAvatar(scene.trackedFrame("mouseClicked"));
+}
+
+float binCoeff(int n, int k){ 
+  if (k == 0 || k == n) 
+    return 1; 
+  return binCoeff(n - 1, k - 1) + binCoeff(n - 1, k); 
+} 
+
+void cubicHermiteCurve(Point P0, Point P1, Point m0, Point m1){  
+  for(float t = 0.0; t<=1; t+=0.001){
+      Point P = P0.dot(2.0*pow(t,3)-3.0*pow(t,2)+1).add(m0.dot(pow(t,3)-2.0*pow(t,2)+t)).add(P1.dot(-2.0*pow(t,3)+3.0*pow(t,2))).add(m1.dot(pow(t,3)-pow(t,2)));
+      point(P.x, P.y, P.z);
+  } 
+}
+
+void cubicBezierCurve(Point P0, Point P1, Point P2, Point P3){  
+  for(float t = 0.0; t<=1; t+=0.001){
+      Point B = P0.dot(pow((1 - t),3)).add(P1.dot(3.0 * t * pow((1 - t),2))).add(P2.dot(3.0 * pow(t, 2) * (1 - t))).add(P3.dot(pow(t,3)));
+      point(B.x, B.y, B.z);
+  } 
+}
+
+void BezierCurve(Point[] P){  
+  for(float t = 0.0; t<=1; t+=0.001){
+    Point B = new Point(0.0,0.0,0.0);
+    int n = P.length;
+    for(int i = 0; i < n; i++){
+      B = B.add(P[i].dot(binCoeff(n, i)*pow(1-t, n-i)*pow(t,i)));
+    }
+    point(B.x, B.y, B.z);
+  } 
 }
 
 void walls() {
