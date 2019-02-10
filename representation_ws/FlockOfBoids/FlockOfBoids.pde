@@ -34,7 +34,7 @@ static int flockHeight = 720;
 static int flockDepth = 600;
 static boolean avoidWalls = true;
 
-int r0, r1, r2, r3, r4, r5, r6;
+int r0, r1, r2, r3, r4, r5, r6, r7;
 int initBoidNum = 900; // amount of boids to start the program with
 ArrayList<Boid> flock;
 Frame avatar;
@@ -61,7 +61,8 @@ void setup() {
     r4 = r.nextInt(initBoidNum);
     r5 = r.nextInt(initBoidNum);
     r6 = r.nextInt(initBoidNum);
-    print(r0 + " " + r1 + " " + r2 + " " + r3 + " " + r4 + " " + r5 + " " + r6);
+    r7 = r.nextInt(initBoidNum);
+    print(r0 + " " + r1 + " " + r2 + " " + r3 + " " + r4 + " " + r5 + " " + r6 + " " + r7);
   }
   scene = new Scene(this);
   scene.setBoundingBox(new Vector(0, 0, 0), new Vector(flockWidth, flockHeight, flockDepth));
@@ -93,8 +94,9 @@ void draw() {
     Point P1 = new Point(v1.x(), v1.y(), v1.z());
     Point P2 = new Point(v2.x(), v2.y(), v2.z());
     Point P3 = new Point(v3.x(), v3.y(), v3.z());
+    Point[] P = new Point[]{P0,P1,P2,P3};
     
-    cubicBezierCurve(P0, P1, P2, P3);
+    BezierCurve(P);
   } else if(curve == "3H"){
     Vector v0 = flock.get(r0).position;
     Vector v1 = flock.get(r1).position;
@@ -113,6 +115,7 @@ void draw() {
     Vector v4 = flock.get(r4).position;
     Vector v5 = flock.get(r5).position;
     Vector v6 = flock.get(r6).position;
+    Vector v7 = flock.get(r6).position;
     
     Point P0 = new Point(v0.x(), v0.y(), v0.z());
     Point P1 = new Point(v1.x(), v1.y(), v1.z());
@@ -121,7 +124,8 @@ void draw() {
     Point P4 = new Point(v4.x(), v4.y(), v4.z());
     Point P5 = new Point(v5.x(), v5.y(), v5.z());
     Point P6 = new Point(v6.x(), v6.y(), v6.z());
-    Point[] P = new Point[]{P0,P1,P2,P3,P4,P5,P6};
+    Point P7 = new Point(v7.x(), v7.y(), v7.z());
+    Point[] P = new Point[]{P0,P1,P2,P3,P4,P5,P6,P7};
     
     BezierCurve(P);
   }
@@ -144,18 +148,18 @@ void cubicHermiteCurve(Point P0, Point P1, Point m0, Point m1){
   } 
 }
 
-void cubicBezierCurve(Point P0, Point P1, Point P2, Point P3){  
+/*void cubicBezierCurve(Point P0, Point P1, Point P2, Point P3){  
   for(float t = 0.0; t<=1; t+=0.001){
       Point B = P0.dot(pow((1 - t),3)).add(P1.dot(3.0 * t * pow((1 - t),2))).add(P2.dot(3.0 * pow(t, 2) * (1 - t))).add(P3.dot(pow(t,3)));
       point(B.x, B.y, B.z);
   } 
-}
+}*/
 
 void BezierCurve(Point[] P){  
   for(float t = 0.0; t<=1; t+=0.001){
     Point B = new Point(0.0,0.0,0.0);
-    int n = P.length;
-    for(int i = 0; i < n; i++){
+    int n = P.length - 1;
+    for(int i = 0; i <= n; i++){
       B = B.add(P[i].dot(binCoeff(n, i)*pow(1-t, n-i)*pow(t,i)));
     }
     point(B.x, B.y, B.z);

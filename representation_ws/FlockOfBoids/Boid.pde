@@ -1,8 +1,8 @@
-import java.util.HashMap;
+import java.util.HashSet;
 class Boid {
   public Frame frame;
-  boolean retained = false;
-  String mode = "FV";
+  boolean retained = true;
+  String mode = "VV";
   // fields
   Vector position, velocity, acceleration, alignment, cohesion, separation; // position, velocity, and acceleration in
   // a vector datatype
@@ -14,6 +14,7 @@ class Boid {
   float t = 0;
   Face[] faces = new Face[4];
   PShape faceVertex;
+  PShape vertexVertex;
 
   Boid(Vector inPos) {
     position = new Vector();
@@ -60,21 +61,32 @@ class Boid {
       V[1] = new VVertex(-3 * sc, 2 * sc, 0, adj1);
       V[2] = new VVertex(-3 * sc, -2 * sc, 0, adj2);
       V[3] = new VVertex(-3 * sc, 0, 2 * sc, adj3);
-      
+      HashSet<HashSet<Integer>> edges = new HashSet<HashSet<Integer>>();
+      for(int i = 0; i < V.length; i++){
+          for(int j=0; j < V[i].adj.length; j++){
+            HashSet<Integer> edge = new HashSet<Integer>();
+            edge.add(i);
+            edge.add(V[i].adj[j]);
+            edges.add(edge);
+          }
+        }
       if(retained){
         pushStyle();
         strokeWeight(2);
         stroke(color(40, 255, 40));
         fill(color(0, 255, 0, 125));
         faceVertex = createShape();
-        faceVertex.beginShape(TRIANGLES);
-        HashMap vFaces = new HashMap<Vertex, Vertex>();
-        Face[] vvFaces = new Face[4];
-        for(int i = 0; i < V.length; i++){
-          for(int j=0; j < 3; j++){
-            //vFaces.add(V[i].V[j]);
+        faceVertex.beginShape(LINES);
+        for(HashSet<Integer> edge: edges){
+          int[] points = new int[2];
+          int count = 0;
+          for(Integer v: edge){
+            points[count] = v;
+            faceVertex.vertex(V[v].x, V[v].y, V[v].z);
+            count+=1;
           }
         }
+        faceVertex.endShape(CLOSE);
         popStyle();
       }
     }
@@ -222,14 +234,17 @@ class Boid {
     if(retained == true){
       shape(faceVertex);
     }else{
-      beginShape(TRIANGLES);
-      for(int i = 0; i < faces.length; i++){
-        for(int j = 0; j < 3; j++){
-          Vertex this_vertex = faces[i].vertices[j]; 
-          vertex(this_vertex.x, this_vertex.y, this_vertex.z); 
+      if(mode == "FV"){
+        beginShape(TRIANGLES);
+        for(int i = 0; i < faces.length; i++){
+          for(int j = 0; j < 3; j++){
+            Vertex this_vertex = faces[i].vertices[j]; 
+            vertex(this_vertex.x, this_vertex.y, this_vertex.z); 
+          }
         }
+        endShape();
+      }else{
       }
-      endShape();
     }
     popStyle();
   }
