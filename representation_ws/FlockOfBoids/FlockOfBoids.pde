@@ -39,11 +39,18 @@ int initBoidNum = 900; // amount of boids to start the program with
 ArrayList<Boid> flock;
 Frame avatar;
 boolean animate = true;
-String curve = "7B"; 
+String curve = "N"; 
+Random r = new Random();
+
+int[] randoms;
+int nPoints = 6;
+
+int MAX_PTOS = 10; /* Numero maximo de puntos de control */
+int NUM_SEG =  20; /* Cuanto mayor sea, mejor se dibuja */
 
 void setup() {
   size(1000, 800, P3D);
-  Random r = new Random();
+  
   
   if(curve == "3B"){
     r0 = r.nextInt(initBoidNum);
@@ -63,6 +70,12 @@ void setup() {
     r6 = r.nextInt(initBoidNum);
     r7 = r.nextInt(initBoidNum);
     print(r0 + " " + r1 + " " + r2 + " " + r3 + " " + r4 + " " + r5 + " " + r6 + " " + r7);
+  } else if(curve == "N"){
+    randoms = new int[nPoints];
+    for(int k = 0; k < nPoints; k++){
+      int rPos = r.nextInt(initBoidNum);
+      randoms[k] = rPos;
+    }
   }
   scene = new Scene(this);
   scene.setBoundingBox(new Vector(0, 0, 0), new Vector(flockWidth, flockHeight, flockDepth));
@@ -128,6 +141,14 @@ void draw() {
     Point[] P = new Point[]{P0,P1,P2,P3,P4,P5,P6,P7};
     
     BezierCurve(P);
+  }else if(curve == "N"){
+    Point[] P = new Point[nPoints];
+    for(int k = 0; k < P.length; k++){
+      Vector vp = flock.get(randoms[k]).position;
+      Point p = new Point(vp.x(), vp.y(), vp.z());
+      P[k] = p;
+    }
+    SplineCubicaNatural(P);
   }
   
   
@@ -164,6 +185,101 @@ void BezierCurve(Point[] P){
     }
     point(B.x, B.y, B.z);
   } 
+}
+
+void SplineCubicaNatural (Point[] P)
+{
+  int i, j, m, xp, yp, zp;
+  int n = P.length;
+  double[] ax = new double[MAX_PTOS];
+  double[] bx = new double[MAX_PTOS]; 
+  double[] cx = new double[MAX_PTOS]; 
+  double[] dx = new double[MAX_PTOS];
+  
+  double[] ay = new double[MAX_PTOS];
+  double[] by = new double[MAX_PTOS]; 
+  double[] cy = new double[MAX_PTOS]; 
+  double[] dy = new double[MAX_PTOS];
+  
+  double[] az = new double[MAX_PTOS];
+  double[] bz = new double[MAX_PTOS]; 
+  double[] cz = new double[MAX_PTOS]; 
+  double[] dz = new double[MAX_PTOS];
+  
+  double[] der = new double[MAX_PTOS];
+  double[] gam = new double[MAX_PTOS];
+  double[] ome = new double[MAX_PTOS];
+  
+  double t, dt;
+  m = n-1; /* m es el numero de intervalos que tendremos */
+  /* Calculamos el valor de gamma (sera el mismo en X y en Y) */
+  gam[0] = .5;
+  for (i=1; i<m; i++) gam[i] = 1./(4.-gam[i-1]);
+  gam[m] = 1./(2.-gam[m-1]);
+  /* Calculamos el valor de omega para X */
+  ome[0] = 3.*(P[1].x-P[0].x)*gam[0];
+  for (i=1; i<m; i++) ome[i] = (3.*(P[i+1].x-P[i-1].x)-ome[i-1])*gam[i];
+  ome[m] = (3.*(P[m].x-P[m-1].x)-ome[m-1])*gam[m];
+  /* Valor de la primera derivada en los puntos (eje X) */
+  der[m]=ome[m];
+  for (i=m-1; i>=0; i=i-1) der[i] = ome[i]-gam[i]*der[i+1];
+  /* Sustituimos los valores de gamma, omega y la primera derivada
+  para calcular los coeficientes a, b, c y d */
+  for (i=0; i<m; i++) {
+    ax[i] = P[i].x;
+    bx[i] = der[i];
+    cx[i] = 3.*(P[i+1].x-P[i].x)-2.*der[i]-der[i+1];
+    dx[i] = 2.*(P[i].x-P[i+1].x)+der[i]+der[i+1];
+  }
+  /* Calculamos omega para Y */
+  ome[0] = 3.*(P[1].y-P[0].y)*gam[0];
+  for (i=1; i<m; i++) ome[i] = (3.*(P[i+1].y-P[i-1].y)-ome[i-1])*gam[i];
+  ome[m] = (3.*(P[m].y-P[m-1].y)-ome[m-1])*gam[m];
+  /* Valor de la primera derivada en los puntos (eje Y) */
+  der[m]=ome[m];
+  for (i=m-1; i>=0; i=i-1) der[i] = ome[i]-gam[i]*der[i+1];
+  /* Sustituimos los valores de gamma, omega y la primera derivada
+  para calcular los coeficientes a, b, c y d */
+  for (i=0; i<m; i++) {
+    ay[i] = P[i].y;
+    by[i] = der[i];
+    cy[i] = 3.*(P[i+1].y-P[i].y)-2.*der[i]-der[i+1];
+    dy[i] = 2.*(P[i].y-P[i+1].y)+der[i]+der[i+1];
+  }
+  /* Calculamos omega para Z */
+  ome[0] = 3.*(P[1].z-P[0].z)*gam[0];
+  for (i=1; i<m; i++) ome[i] = (3.*(P[i+1].z-P[i-1].z)-ome[i-1])*gam[i];
+  ome[m] = (3.*(P[m].z-P[m-1].z)-ome[m-1])*gam[m];
+  /* Valor de la primera derivada en los puntos (eje Z) */
+  der[m]=ome[m];
+  for (i=m-1; i>=0; i=i-1) der[i] = ome[i]-gam[i]*der[i+1];
+  /* Sustituimos los valores de gamma, omega y la primera derivada
+  para calcular los coeficientes a, b, c z d */
+  for (i=0; i<m; i++) {
+    az[i] = P[i].z;
+    bz[i] = der[i];
+    cz[i] = 3.*(P[i+1].z-P[i].z)-2.*der[i]-der[i+1];
+    dz[i] = 2.*(P[i].z-P[i+1].z)+der[i]+der[i+1];
+  }
+  /* En esta parte, se dibujara la curva por segmentos de lineas
+  rectas; si NUM_SEG es un valor alto, la grafica se dibujara
+  con mayor precision. */
+  dt = 1./(double) NUM_SEG;
+  int prev_x = (int)P[0].x;
+  int prev_y = (int)P[0].y;
+  int prev_z = (int)P[0].z;
+  
+  for (i=0; i<m; i++) {
+    for (j=1, t=dt; j<NUM_SEG; j++, t+=dt) {
+      xp = (int) (ax[i]+bx[i]*t+cx[i]*t*t+dx[i]*t*t*t);
+      yp = (int) (ay[i]+by[i]*t+cy[i]*t*t+dy[i]*t*t*t);
+      zp = (int) (az[i]+bz[i]*t+cz[i]*t*t+dz[i]*t*t*t);
+      line(prev_x, prev_y, prev_z, xp, yp, zp);
+      prev_x = xp;
+      prev_y = yp;
+      prev_z = zp;
+    }
+  }
 }
 
 void walls() {
