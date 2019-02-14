@@ -1,8 +1,8 @@
 import java.util.HashSet;
 class Boid {
   public Frame frame;
-  boolean retained = true;
-  String mode = "VV";
+  boolean retained = false;
+  String mode = "WE";
   // fields
   Vector position, velocity, acceleration, alignment, cohesion, separation; // position, velocity, and acceleration in
   // a vector datatype
@@ -12,9 +12,13 @@ class Boid {
   float sc = 3; // scale factor for the render of the boid
   float flap = 0;
   float t = 0;
-  Face[] faces = new Face[4];
   PShape faceVertex;
   PShape vertexVertex;
+  PShape wingedEdge;
+  
+  Face[] faces = new Face[4];
+  WE_Vertex[] vertices;
+  ArrayList<HashSet<Integer>> vertexPerFace;
 
   Boid(Vector inPos) {
     position = new Vector();
@@ -50,7 +54,68 @@ class Boid {
         faceVertex.endShape(CLOSE);
         popStyle();
       }
+    } else if(mode == "WE"){
+      vertices = new WE_Vertex[4];
+      WE_Edge[] edges = new WE_Edge[6];
+      WE_Face[] faces = new WE_Face[4];
+    
+      vertices[0] = new WE_Vertex(3 * sc, 0, 0, 0);
+      vertices[1] = new WE_Vertex(-3 * sc, 2 * sc, 0, 1);
+      vertices[2] = new WE_Vertex(-3 * sc, -2 * sc, 0, 3);
+      vertices[3] = new WE_Vertex(-3 * sc, 0, 2 * sc, 4);
+      
+      faces[0] = new WE_Face(0);
+      faces[1] = new WE_Face(3);
+      faces[2] = new WE_Face(0);
+      faces[3] = new WE_Face(1);
+      
+      edges[0] = new WE_Edge(0, 3, 2, 0, edges[4], edges[5], edges[1], edges[2]);
+      edges[1] = new WE_Edge(0, 1, 0, 3, edges[2], edges[0], edges[5], edges[3]);
+      edges[2] = new WE_Edge(1, 3, 0, 1, edges[0], edges[1], edges[3], edges[4]);
+      edges[3] = new WE_Edge(1, 2, 1, 3, edges[4], edges[2], edges[1], edges[5]);
+      edges[4] = new WE_Edge(2, 3, 1, 2, edges[2], edges[3], edges[5], edges[0]);
+      edges[5] = new WE_Edge(0, 2, 3, 2, edges[3], edges[1], edges[0], edges[4]);
+      
+      vertexPerFace = new ArrayList<HashSet<Integer>>();
+      
+      for(int i = 0; i < 4; i++){
+        HashSet<Integer> hash = new HashSet<Integer>();
+        vertexPerFace.add(hash);
+      }
+      
+      for(int i = 0; i < edges.length; i++){
+        int v1 = edges[i].v1;
+        int v2 = edges[i].v2;
+        int f1 = edges[i].aFace;
+        int f2 = edges[i].bFace;
+        print(f1 + " " + f2 + "\n");
+        vertexPerFace.get(f1).add(v1);
+        vertexPerFace.get(f1).add(v2);
+        vertexPerFace.get(f2).add(v1);
+        vertexPerFace.get(f1).add(v2);
+      }
+                
+        //for(WE_Vertex vertex: vertexPerFace.get(3))
+        //    print(vertex.x + " " + vertex.y + " " + " " + vertex.z);
+      
+      if(retained){
+        pushStyle();
+        strokeWeight(2);
+        stroke(color(40, 255, 40));
+        fill(color(0, 255, 0, 125));
+        faceVertex = createShape();
+        faceVertex.beginShape(TRIANGLES);
+        for(int i = 0; i < vertexPerFace.size(); i++){
+          for(int vertex: vertexPerFace.get(i)){
+            WE_Vertex this_vertex = vertices[vertex];
+            faceVertex.vertex(this_vertex.x, this_vertex.y, this_vertex.z); 
+          }
+        }
+        faceVertex.endShape(CLOSE);
+        popStyle();
+      }
     }
+    
     else{
       VVertex[] V = new VVertex[4];
       int[] adj0 = new int[]{1,2,3};
@@ -69,7 +134,7 @@ class Boid {
             edge.add(V[i].adj[j]);
             edges.add(edge);
           }
-        }
+      }
       if(retained){
         pushStyle();
         strokeWeight(2);
@@ -152,7 +217,7 @@ class Boid {
         alignment.add(boid.velocity);
         alignmentCount++;
       }
-      //cohesion
+      //cohesion  
       float dist = dist(position.x(), position.y(), boid.position.x(), boid.position.y());
       if (dist > 0 && dist <= neighborhoodRadius) {
         posSum.add(boid.position);
@@ -243,7 +308,15 @@ class Boid {
           }
         }
         endShape();
-      }else{
+      } else if(mode == "WE"){
+        beginShape(TRIANGLES);
+        for(int i = 0; i < vertexPerFace.size(); i++){
+          for(int vertex: vertexPerFace.get(i)){
+            WE_Vertex this_vertex = vertices[vertex];
+            vertex(this_vertex.x, this_vertex.y, this_vertex.z); 
+          }
+        }
+        endShape();
       }
     }
     popStyle();
