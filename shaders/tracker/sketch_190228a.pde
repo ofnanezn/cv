@@ -20,8 +20,19 @@ int h = 520;
 float angle;
 float scale;
 int nClusters;
+PShader lightShader;
+float angle2 = 0;
+
+State[] states;
 
 PVector lastPosition;
+int nBoxes;
+int selectedBox;
+Random randomGenerator;
+
+float[] x;
+float[] y;
+float[] z;
 
 void settings(){
   size(1280, 520, P3D);
@@ -29,6 +40,7 @@ void settings(){
 
 void setup() {
   
+  lightShader = loadShader("lightfrag.glsl", "lightvert.glsl");
   minDepth = 400;
   maxDepth = 830;
   leftViewport = createGraphics(w/2, h, P3D);
@@ -37,6 +49,18 @@ void setup() {
   tracker = new KinectTracker(minDepth, maxDepth);
   scale = 1;
   lastPosition = new PVector(0, 0, 0);
+  nBoxes = 5;
+  states = new State[nBoxes];
+  selectedBox = 0;
+  randomGenerator = new Random();
+  x = new float[nBoxes];
+  y = new float[nBoxes];
+  z = new float[nBoxes];
+  for(int i = 0; i < nBoxes; i++){
+    x[i] = 200 + randomGenerator.nextFloat() * (300);
+    y[i] = 200 + randomGenerator.nextFloat() * (300);
+    z[i] = 0 + randomGenerator.nextFloat() * (0);
+  }
 }
 
 void draw() {
@@ -99,58 +123,66 @@ void draw() {
   leftViewport.endDraw();
   
   rightViewport.beginDraw();
-  rightViewport.pushMatrix();
-  rightViewport.translate(300, 300, 1);
-  int axesSize = 1000;
-  //Draw Axes
-  //X  - red
-  rightViewport.stroke(192,0,0);
-  rightViewport.line(0,0,0,axesSize,0,0);
-  //Y - green
-  rightViewport.stroke(0,192,0);
-  rightViewport.line(0,0,0,0,axesSize,0);
-  //Z - blue
-  rightViewport.stroke(0,0,192);
-  rightViewport.line(0,0,0,0,0,axesSize);
-
-  rightViewport.translate(-300, -300, 0);
-  rightViewport.popMatrix();
+  rightViewport.shader(lightShader);
+  rightViewport.pointLight(255, 255, 255, 2, 0, 100);
+  rightViewport.lights();
+  for(int i = 0; i < nBoxes; i++){
+    println(x[i]);
+    drawBox(x[i], y[i] , z[i], rightViewport, i);
+  }
   
   rightViewport.pushMatrix();
-  
+  PVector selectedPosition = states[selectedBox].position;
+  PVector selectedRotation = states[selectedBox].rotation;
+  rightViewport.translate(-selectedPosition.x, -selectedPosition.y, -selectedPosition.z);
+  rightViewport.rotateX(selectedRotation.x);
+  rightViewport.rotateY(selectedRotation.y);
+  rightViewport.rotateZ(selectedRotation.z);
+  //rotations
   if(nClusters == 1){
-    rightViewport.translate(v1.x, v1.y, v1.z);
-    lastPosition = new PVector(v1.x, v1.y, scale);
     rightViewport.scale(scale);
   }else{
-    rightViewport.translate(lastPosition.x, lastPosition.y, 0);
     rightViewport.scale(lastPosition.z);
     tracker.calculateClusterDepth();
     float dy = v1.y - v2.y; //Y distance between two points
     float dd = tracker.lerpK1Depth - tracker.lerpK2Depth; //Depth distance between two points
-    
-    rightViewport.rotateX(map(lerpAvgMinDepth, minDepth+40, maxDepth, -4*PI, 4*PI));
+    float xAngle = map(lerpAvgMinDepth, minDepth+40, maxDepth, -4*PI, 4*PI);
+    float yAngle = map(dd, -200, 200, -PI, PI);
+    float zAngle = map(dy, -100, 100, -PI, PI);
+    rightViewport.rotateX(xAngle);
     if(Math.abs(dy) > 5){
-      rightViewport.rotateZ(map(dy, -100, 100, -PI, PI));
+      rightViewport.rotateZ(zAngle);
     }
     println(dd);
-    //rightViewport.rotateY(map(dd, -200, 200, -PI, PI));
+    //rightViewport.rotateY(yAngle);  
+    states[selectedBox].rotation = new PVector(xAngle, yAngle, zAngle);
   }
-  
-  //
-  
-    //Draw Scene
-  angle+=.07;
-  rightViewport.noStroke();
-  rightViewport.fill(204);
-  rightViewport.background(0);
-  rightViewport.lights();
-  //rightViewport.perspective();//default
-  rightViewport.box(160);
+  rightViewport.translate(selectedPosition.x, selectedPosition.y, selectedPosition.z);
+  //translations
+  if(nClusters == 1){
+    rightViewport.translate(v1.x, v1.y, v1.z);
+    lastPosition = new PVector(v1.x, v1.y, scale);
+  }else{
+    rightViewport.translate(lastPosition.x, lastPosition.y, 0);
+  }
   rightViewport.popMatrix();
+  
   
   rightViewport.endDraw();
   
   image(leftViewport, 0, 0);
   image(rightViewport, w/2, 0);
+}
+
+void drawBox(float x, float y , float z, PGraphics viewPort, int i){
+  viewPort.pushMatrix();
+  
+  viewPort.translate(x,y,z);
+  viewPort.noStroke();
+  viewPort.fill(204);
+  
+  //rightViewport.perspective();//default
+  viewPort.box(50);
+  states[i] = new State(new PVector(x, y, z), new PVector(0, 0, 0));
+  viewPort.popMatrix();
 }
